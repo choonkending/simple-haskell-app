@@ -20,4 +20,5 @@ executable simple-haskell-app
                        wai,
                        warp,
                        http-types,
-                       bytestring
+                       bytestring,
+                       wai-extra
