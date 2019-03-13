@@ -24,12 +24,9 @@ handleNameRequestMiddleware app1 = app2 where
     then handleNameRequest req respond
     else app1 req respond
   isNameRequest req =
-    let path = listToMaybe (pathInfo req)
-    in case path of
-      Just pathName -> if requestMethod req == methodPost && pathName == "names"
-        then True
-        else False
-      Nothing -> False
+    case (requestMethod req, pathInfo req) of
+      (method, ["names"]) | method == methodPost -> True
+      _ -> False
 
 handleNameRequest :: Application
 handleNameRequest req respond = do
