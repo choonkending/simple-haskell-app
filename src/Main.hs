@@ -6,7 +6,7 @@ import Network.Wai.Parse(parseRequestBodyEx, defaultParseRequestBodyOptions, Par
 import Network.HTTP.Types.Status(status200, status400, status404)
 import Network.HTTP.Types.Method(methodPost)
 import Control.Monad(join)
-import Data.Maybe(fromMaybe)
+import Data.Maybe(fromMaybe, listToMaybe)
 import Data.ByteString.Lazy(fromStrict)
 import Data.ByteString(ByteString)
 import Data.Monoid((<>))
@@ -24,10 +24,12 @@ handleNameRequestMiddleware app1 = app2 where
     then handleNameRequest req respond
     else app1 req respond
   isNameRequest req =
-    trace (show (pathInfo req)) $
-      if requestMethod req == methodPost
+    let path = listToMaybe (pathInfo req)
+    in case path of
+      Just pathName -> if requestMethod req == methodPost && pathName == "names"
         then True
         else False
+      Nothing -> False
 
 handleNameRequest :: Application
 handleNameRequest req respond = do
