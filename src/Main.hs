@@ -1,14 +1,16 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
-import Network.Wai(Application, Middleware, requestMethod, responseLBS, queryString)
+import Network.Wai(Application, Middleware, requestMethod, pathInfo, responseLBS, queryString)
 import Network.Wai.Handler.Warp(run)
 import Network.Wai.Parse(parseRequestBodyEx, defaultParseRequestBodyOptions, Param, FileInfo)
 import Network.HTTP.Types.Status(status200, status400, status404)
+import Network.HTTP.Types.Method(methodPost)
 import Control.Monad(join)
 import Data.Maybe(fromMaybe)
 import Data.ByteString.Lazy(fromStrict)
 import Data.ByteString(ByteString)
 import Data.Monoid((<>))
+import Debug.Trace(trace)
 
 app :: Application
 app = handleNameRequestMiddleware notFound
@@ -22,9 +24,10 @@ handleNameRequestMiddleware app1 = app2 where
     then handleNameRequest req respond
     else app1 req respond
   isNameRequest req =
-    if requestMethod req == "POST"
-      then True
-      else False
+    trace (show (pathInfo req)) $
+      if requestMethod req == methodPost
+        then True
+        else False
 
 handleNameRequest :: Application
 handleNameRequest req respond = do
