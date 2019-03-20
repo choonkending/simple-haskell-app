@@ -4,7 +4,7 @@ import Network.Wai(Application, Middleware, Request, requestMethod, pathInfo, re
 import Network.Wai.Handler.Warp(run)
 import Network.Wai.Parse(parseRequestBodyEx, defaultParseRequestBodyOptions, Param, FileInfo)
 import Network.HTTP.Types.Status(status200, status400, status404)
-import Network.HTTP.Types.Method(methodPost)
+import Network.HTTP.Types.Method(methodPost, methodGet)
 import Control.Monad(join)
 import Data.Maybe(fromMaybe, listToMaybe)
 import Data.ByteString.Lazy(fromStrict)
@@ -18,11 +18,21 @@ app = applicationMiddleware notFound
 notFound :: Application
 notFound _ respond =  respond (responseLBS status404 [] "Not Found")
 
+success :: Application
+success _ respond =  respond (responseLBS status200 [] "Hello")
+
+successMiddleware :: Middleware
+successMiddleware = ifRequest isSuccessRequest success where
+  isSuccessRequest req =
+    case (requestMethod req, pathInfo req) of
+      (method, ["healthCheck"]) | method == methodGet -> True
+      _ -> False
+
 handleNameRequestMiddleware :: Middleware
-handleNameRequestMiddleware _ = handleNameRequest
+handleNameRequestMiddleware = ifRequest isNameRequest handleNameRequest
 
 applicationMiddleware :: Middleware
-applicationMiddleware = ifRequest isNameRequest handleNameRequest
+applicationMiddleware = successMiddleware . handleNameRequestMiddleware
 
 -- ifRequest :: (Request -> Bool) -> Application -> Application -> Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived
 -- ifRequest :: (Request -> Bool) -> Application -> Application -> Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived
