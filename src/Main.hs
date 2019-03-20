@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
-import Network.Wai(Application, Middleware, Request, ifRequest, requestMethod, pathInfo, responseLBS, queryString)
+import Network.Wai(Application, Middleware, Request, requestMethod, pathInfo, responseLBS, queryString)
 import Network.Wai.Handler.Warp(run)
 import Network.Wai.Parse(parseRequestBodyEx, defaultParseRequestBodyOptions, Param, FileInfo)
 import Network.HTTP.Types.Status(status200, status400, status404)
@@ -13,7 +13,7 @@ import Data.Monoid((<>))
 import Debug.Trace(trace)
 
 app :: Application
-app = z notFound
+app = applicationMiddleware notFound
 
 notFound :: Application
 notFound _ respond =  respond (responseLBS status404 [] "Not Found")
@@ -21,34 +21,25 @@ notFound _ respond =  respond (responseLBS status404 [] "Not Found")
 handleNameRequestMiddleware :: Middleware
 handleNameRequestMiddleware _ = handleNameRequest
 
-z :: Middleware
-z = ifRequest3 isNameRequest handleNameRequest
+applicationMiddleware :: Middleware
+applicationMiddleware = ifRequest isNameRequest handleNameRequest
 
-ifRequest2 :: (Request -> Bool) -> Middleware -> Middleware -> Middleware
-ifRequest2 pred success fail app req = if pred req
-  then success app req
-  else fail app req
+-- ifRequest :: (Request -> Bool) -> Application -> Application -> Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived
+-- ifRequest :: (Request -> Bool) -> Application -> Application -> Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived
+-- ifRequest pred app1 app2 req respond = if pred req
+--   then app1 req respond
+--   else app2 req respond
 
-ifRequest3 :: (Request -> Bool) -> Application -> Middleware
-ifRequest3 pred app1 app2 req = if pred req
-  then app1 req
-  else app2 req
+ifRequest :: (Request -> Bool) -> Application -> Middleware
+ifRequest pred app1 app2 req = if pred req
+   then app1 req
+   else app2 req
 
 isNameRequest :: Request -> Bool
 isNameRequest req =
   case (requestMethod req, pathInfo req) of
     (method, ["names"]) | method == methodPost -> True
     _ -> False
-
-handleNameRequestMiddleware2 :: Middleware
-handleNameRequestMiddleware2 app1 = app2 where
-  app2 req respond = if isNameRequest req
-    then handleNameRequest req respond
-    else app1 req respond
-  isNameRequest req =
-    case (requestMethod req, pathInfo req) of
-      (method, ["names"]) | method == methodPost -> True
-      _ -> False
 
 handleNameRequest :: Application
 handleNameRequest req respond = do
