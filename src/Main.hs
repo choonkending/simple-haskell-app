@@ -19,7 +19,7 @@ notFound :: Application
 notFound _ respond =  respond (responseLBS status404 [] "Not Found")
 
 success :: Application
-success _ respond =  respond (responseLBS status200 [] "Hello")
+success _ respond =  respond (responseLBS status200 [] "OK")
 
 successMiddleware :: Middleware
 successMiddleware = ifRequest isSuccessRequest success where
