@@ -39,7 +39,7 @@ transactionIdMiddleware app = appWithTransactionId where
   appWithTransactionId req respond = app req (createTransactionID respond)
 
 addResponseHeader :: ResponseHeaders -> ResponseHeaders
-addResponseHeader rs = transactionIDHeader : rs where
+addResponseHeader = (transactionIDHeader :) where
   transactionIDHeader = ("x-transaction-id", "123")
 
 createTransactionID :: (Response -> IO ResponseReceived) -> Response -> IO ResponseReceived
