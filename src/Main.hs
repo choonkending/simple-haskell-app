@@ -1,8 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
-import Network.Wai(Application, Middleware, Request, requestMethod, pathInfo, responseLBS, queryString)
+import Network.Wai(Application, Middleware, Request, Response, ResponseReceived, requestMethod, pathInfo, responseLBS, queryString, mapResponseHeaders)
 import Network.Wai.Handler.Warp(run)
 import Network.Wai.Parse(parseRequestBodyEx, defaultParseRequestBodyOptions, Param, FileInfo)
+import Network.HTTP.Types.Header(ResponseHeaders)
 import Network.HTTP.Types.Status(status200, status400, status404)
 import Network.HTTP.Types.Method(methodPost, methodGet)
 import Control.Monad(join)
@@ -31,8 +32,22 @@ successMiddleware = ifRequest isSuccessRequest success where
 handleNameRequestMiddleware :: Middleware
 handleNameRequestMiddleware = ifRequest isNameRequest handleNameRequest
 
+-- if has request id in header, pass it to x-transaction-id in header
+-- otherwise, generate uuid and pass it to x-transaction-id in header
+transactionIdMiddleware :: Middleware
+transactionIdMiddleware app = appWithTransactionId where
+  appWithTransactionId req respond = app req (createTransactionID respond)
+
+addResponseHeader :: ResponseHeaders -> ResponseHeaders
+addResponseHeader rs = transactionIDHeader : rs where
+  transactionIDHeader = ("x-transaction-id", "123")
+
+createTransactionID :: (Response -> IO ResponseReceived) -> Response -> IO ResponseReceived
+createTransactionID respond response = respond (mapResponseHeaders addResponseHeader response)
+
 applicationMiddleware :: Middleware
-applicationMiddleware = successMiddleware . handleNameRequestMiddleware
+applicationMiddleware = transactionIdMiddleware . successMiddleware . handleNameRequestMiddleware
+
 
 -- ifRequest :: (Request -> Bool) -> Application -> Application -> Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived
 -- ifRequest :: (Request -> Bool) -> Application -> Application -> Request -> (Response -> IO ResponseReceived) -> IO ResponseReceived
