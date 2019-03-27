@@ -21,4 +21,5 @@ executable simple-haskell-app
                        warp,
                        http-types,
                        bytestring,
-                       wai-extra
+                       wai-extra,
+                       uuid
