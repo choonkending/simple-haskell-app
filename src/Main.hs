@@ -36,7 +36,7 @@ handleNameRequestMiddleware = ifRequest isNameRequest handleNameRequest
 -- otherwise, generate uuid and pass it to x-transaction-id in header
 transactionIdMiddleware :: Middleware
 transactionIdMiddleware app = appWithTransactionId where
-  appWithTransactionId req respond = app req (createTransactionID respond)
+  appWithTransactionId req  = app req . createTransactionID
 
 addResponseHeader :: ResponseHeaders -> ResponseHeaders
 addResponseHeader = (transactionIDHeader :) where
