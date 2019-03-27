@@ -12,6 +12,9 @@ import Data.ByteString.Lazy(fromStrict)
 import Data.ByteString(ByteString)
 import Data.Monoid((<>))
 import Debug.Trace(trace)
+import Data.UUID(UUID)
+import qualified Data.UUID.V4 as UUID(nextRandom)
+import qualified Data.UUID as UUID(toASCIIBytes)
 
 app :: Application
 app = applicationMiddleware notFound
@@ -38,12 +41,14 @@ transactionIdMiddleware :: Middleware
 transactionIdMiddleware app = appWithTransactionId where
   appWithTransactionId req  = app req . createTransactionID
 
-addResponseHeader :: ResponseHeaders -> ResponseHeaders
-addResponseHeader = (transactionIDHeader :) where
-  transactionIDHeader = ("x-transaction-id", "123")
+addResponseHeader :: UUID -> ResponseHeaders -> ResponseHeaders
+addResponseHeader transactionID = (transactionIDHeader :) where
+  transactionIDHeader = ("x-transaction-id", UUID.toASCIIBytes transactionID)
 
 createTransactionID :: (Response -> IO ResponseReceived) -> Response -> IO ResponseReceived
-createTransactionID respond response = respond (mapResponseHeaders addResponseHeader response)
+createTransactionID respond response = do
+  transactionID <- UUID.nextRandom
+  respond (mapResponseHeaders (addResponseHeader transactionID) response)
 
 applicationMiddleware :: Middleware
 applicationMiddleware = transactionIdMiddleware . successMiddleware . handleNameRequestMiddleware
