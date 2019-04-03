@@ -40,9 +40,9 @@ handleNameRequestMiddleware = ifRequest isNameRequest handleNameRequest
 transactionIdMiddleware :: Middleware
 transactionIdMiddleware app = appWithTransactionId where
   appWithTransactionId req respond = do
-    let transactionID = getTransactionId req
-    let decorateRespond = maybe createTransactionID propagateTransactionID transactionID
-    app req (decorateRespond respond)
+    let requestTransactionID = getTransactionId req
+    transactionID <- maybe newTransactionID pure requestTransactionID
+    app req (propagateTransactionID transactionID respond)
 
 propagateTransactionID :: ByteString -> (Response -> IO ResponseReceived) -> Response -> IO ResponseReceived
 propagateTransactionID transactionID respond response =
@@ -55,10 +55,8 @@ addResponseHeader :: ByteString -> ResponseHeaders -> ResponseHeaders
 addResponseHeader transactionID = (transactionIDHeader :) where
   transactionIDHeader = ("x-transaction-id", transactionID)
 
-createTransactionID :: (Response -> IO ResponseReceived) -> Response -> IO ResponseReceived
-createTransactionID respond response = do
-  transactionID <- UUID.nextRandom
-  respond (mapResponseHeaders (addResponseHeader $ UUID.toASCIIBytes transactionID) response)
+newTransactionID :: IO ByteString
+newTransactionID = UUID.toASCIIBytes <$> UUID.nextRandom
 
 applicationMiddleware :: Middleware
 applicationMiddleware = transactionIdMiddleware . successMiddleware . handleNameRequestMiddleware
