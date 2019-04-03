@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
-import Network.Wai(Application, Middleware, Request, Response, ResponseReceived, requestMethod, pathInfo, responseLBS, queryString, mapResponseHeaders)
+import Network.Wai(Application, Middleware, Request, requestHeaders, Response, ResponseReceived, requestMethod, pathInfo, responseLBS, queryString, mapResponseHeaders)
 import Network.Wai.Handler.Warp(run)
 import Network.Wai.Parse(parseRequestBodyEx, defaultParseRequestBodyOptions, Param, FileInfo)
 import Network.HTTP.Types.Header(ResponseHeaders)
@@ -39,16 +39,26 @@ handleNameRequestMiddleware = ifRequest isNameRequest handleNameRequest
 -- otherwise, generate uuid and pass it to x-transaction-id in header
 transactionIdMiddleware :: Middleware
 transactionIdMiddleware app = appWithTransactionId where
-  appWithTransactionId req  = app req . createTransactionID
+  appWithTransactionId req respond = do
+    let transactionID = getTransactionId req
+    let decorateRespond = maybe createTransactionID propagateTransactionID transactionID
+    app req (decorateRespond respond)
 
-addResponseHeader :: UUID -> ResponseHeaders -> ResponseHeaders
+propagateTransactionID :: ByteString -> (Response -> IO ResponseReceived) -> Response -> IO ResponseReceived
+propagateTransactionID transactionID respond response =
+  respond (mapResponseHeaders (addResponseHeader transactionID) response)
+
+getTransactionId :: Request -> Maybe ByteString
+getTransactionId req = lookup "x-transaction-id" $ requestHeaders req
+
+addResponseHeader :: ByteString -> ResponseHeaders -> ResponseHeaders
 addResponseHeader transactionID = (transactionIDHeader :) where
-  transactionIDHeader = ("x-transaction-id", UUID.toASCIIBytes transactionID)
+  transactionIDHeader = ("x-transaction-id", transactionID)
 
 createTransactionID :: (Response -> IO ResponseReceived) -> Response -> IO ResponseReceived
 createTransactionID respond response = do
   transactionID <- UUID.nextRandom
-  respond (mapResponseHeaders (addResponseHeader transactionID) response)
+  respond (mapResponseHeaders (addResponseHeader $ UUID.toASCIIBytes transactionID) response)
 
 applicationMiddleware :: Middleware
 applicationMiddleware = transactionIdMiddleware . successMiddleware . handleNameRequestMiddleware
