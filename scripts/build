@@ -4,5 +4,5 @@ set -euo pipefail
 # u means fail if you use an undefined environment variable
 # o pipefail means exit if there is a failing command in the pipe line, e.g. a | b
 
-
+stack build
 
