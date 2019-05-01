@@ -1,0 +1,8 @@
+#!/bin/bash
+set -euo pipefail
+# e means exit if it fails
+# u means fail if you use an undefined environment variable
+# o pipefail means exit if there is a failing command in the pipe line, e.g. a | b
+
+
+
